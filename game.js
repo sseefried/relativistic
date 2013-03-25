@@ -41,7 +41,9 @@ var game = (function () {
     height = $(canvas).height();
 
     ship    = { x:0, y:0, angle: 0.0, vx: 0, vy: 0};
-    planets = [{x:100, y:100, r:10}, {x:200, y:-100, r:20}];    
+    planets = randomPlanets(20);
+              
+              
     keyboard.init();
 
     r = Raphael(canvas, $(canvas).width(), $(canvas).height());
@@ -50,6 +52,16 @@ var game = (function () {
   var start = function() {
     window.requestAnimationFrame(animate, canvas);
   };
+
+  var randomPlanets = function(n) {
+    var i, ps = [];
+    var rand = function(n) { return Math.round(Math.random()*n*2) - n};
+    
+    for (i=0; i<n; i++) {
+      ps.push({x: rand(300), y:rand(300), r: Math.random()*30});
+    }
+    return ps;
+  }
   
   // Translates the co-ordinates from idealised to concrete.
   var trans = function(o) {
@@ -100,11 +112,12 @@ var game = (function () {
 
   var animate = function() {
     var angleInc = 0.12;
-    var acceleration = 0.03;
+
     var thruster = false;
     var i,p;
 
-    var c = 1; // speed of "light"
+    var c = 5; // speed of "light"
+    var acceleration = c/30;
     var f = function(x) { return(Math.sqrt(1.0 - x*x/(c*c))); };
     var sgn = function(x) { return x < 0 ? -1 : 1; };
     var speed = Math.sqrt(ship.vx*ship.vx + ship.vy*ship.vy);
@@ -136,7 +149,6 @@ var game = (function () {
     }
     
     if (keyboard.keydown(38)) {
-      console.log(ang);
       ship.vx -= Math.sin(ship.angle) * acceleration;
       ship.vy -= Math.cos(ship.angle) * acceleration;
       ship.vx = sgn(ship.vx) * Math.min(Math.abs((c*0.99)*Math.sin(ship.angle)), Math.abs(ship.vx));
