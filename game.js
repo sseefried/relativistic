@@ -100,24 +100,30 @@ var game = (function () {
 
   var animate = function() {
     var angleInc = 0.12;
-    var shipSpeed = 2;
     var acceleration = 0.03;
     var thruster = false;
     var i,p;
 
-    // var c = 2; // speed of "light"
-    // var f = function(x) { return(Math.abs(1 - Math.sqrt(x*x/(c*c)))); }
-    // 
-    // var sx = f(ship.vx);
-    // var sy = f(ship.vy);
+    var c = 1; // speed of "light"
+    var f = function(x) { return(Math.sqrt(1.0 - x*x/(c*c))); };
+    var sgn = function(x) { return x < 0 ? -1 : 1; };
+    var speed = Math.sqrt(ship.vx*ship.vx + ship.vy*ship.vy);
+    var scaleFactor = f(speed);
+    var ang = Math.atan2(ship.vx,ship.vy);
+    var path;
+
+//    console.log(sx,sy);
 
     r.clear();
 
-
-
     for (i=0; i < planets.length; i++) {
       p = trans(planets[i]);
-      r.circle(p.cx, p.cy, p.r).attr({ fill: "grey"}); //.scale(sx, sy, ship.cx, ship.cy);
+      path =  "t"+(ship.cx-p.cx)+","+(ship.cy-p.cy)+
+              "r"+Raphael.deg(ang)+
+              "s1,"+scaleFactor+
+              "r"+(-Raphael.deg(ang))+
+              "t"+(p.cx-ship.cx)+","+(p.cy-ship.cy);
+      r.circle(p.cx, p.cy, p.r).attr({ fill: "grey"}).transform(path);
     }
 
     // Update ship state
@@ -130,8 +136,11 @@ var game = (function () {
     }
     
     if (keyboard.keydown(38)) {
+      console.log(ang);
       ship.vx -= Math.sin(ship.angle) * acceleration;
       ship.vy -= Math.cos(ship.angle) * acceleration;
+      ship.vx = sgn(ship.vx) * Math.min(Math.abs((c*0.99)*Math.sin(ship.angle)), Math.abs(ship.vx));
+      ship.vy = sgn(ship.vy) * Math.min(Math.abs((c*0.99)*Math.cos(ship.angle)), Math.abs(ship.vy));
       thruster = true;
     }
 
