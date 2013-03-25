@@ -70,22 +70,6 @@ var game = (function () {
     return(o);
   }
 
-  // var rotateAbout = function(o, p, theta) {
-  //   var px = p.x, py = p.y, o2;
-  //   o.x -= px;
-  //   o.y -= py;
-  //   o2 = rotate(o, theta);
-  //   o2.x += px;
-  //   o2.y += py;
-  //   return o2;
-  // }
-  // 
-  // // rotate about (0,0)
-  // var rotate = function(o,theta) {
-  //   var ct = Math.cos(theta), st = Math.sin(theta);
-  //   return({x: o.x*ct + o.y*st, y: o.y*ct - o.x*st });
-  // }
-
   // Ship is always drawn at (0,0) co-ordinates
   var drawShip = function(thruster) {
     var len = 10, i, p,
