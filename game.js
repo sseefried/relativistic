@@ -1,17 +1,18 @@
 /*
- * TODO: 
+ * TODO:
  * 1. Be able to turn relativity on and off.
- * 2. Show speed as a fraction of 'c' 
+ * 2. Show speed as a fraction of 'c'
  */
 
 (function() {
   var lastTime=0;
   var vendors=['ms', 'moz', 'webkit', 'o'];
-	var x;
+  var x;
   for (x=0; x<vendors.length && !window.requestAnimationFrame; ++x) {
   window.requestAnimationFrame = window[vendors[x] + 'RequestAnimationFrame'];
   window.cancelAnimationFrame =
-    window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x] + 'CancelRequestAnimationFrame'];
+    window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x] +
+      'CancelRequestAnimationFrame'];
   }
   if (!window.requestAnimationFrame) {
     window.requestAnimationFrame=function(callback, element) {
@@ -38,8 +39,8 @@ $('document').ready(function () {
 
 var game = (function () {
   var c; // speed of light
-  var ended, canvas, r, width, height; 
-  var ship, planets; 
+  var ended, canvas, r, width, height;
+  var ship, planets;
   var universeWidth, universeHeight;
   var trans; // the translate function
 
@@ -57,7 +58,7 @@ var game = (function () {
     universeWidth
     trans = translate(0,0, width, height,1);
 
-              
+
     keyboard.init();
 
     r = Raphael(canvas, $(canvas).width(), $(canvas).height());
@@ -70,7 +71,7 @@ var game = (function () {
   var randomPlanets = function(n) {
     var i, ps = [];
     var rand = function(n) { return Math.round(Math.random()*n*2) - n};
-    
+
     for (i=0; i<n; i++) {
       ps.push({x: rand(width*2), y:rand(height*2), r: Math.random()*width/30});
     }
@@ -93,7 +94,7 @@ var game = (function () {
   var drawShip = function(thruster) {
     var len = width/100, i, p,
         points = [ {x: ship.x,     y: ship.y-len },
-                   {x: ship.x-len, y: ship.y+len }, 
+                   {x: ship.x-len, y: ship.y+len },
                    {x: ship.x+len, y: ship.y+len } ],
         path = "";
         s = trans(ship);
@@ -125,11 +126,11 @@ var game = (function () {
     r.circle(dcx,dcy,dl).attr({stroke: dcolor, "stroke-width": "2"});
     r.path("M" + dcx + "," + dcy + "L" + (dcx-dx) + "," + (dcy + dy)).attr({stroke: dcolor, "stroke-width": "2px"});
 
-    
+
   }
-  
-  /* 
-   * Draws the planets in a small radar screen in the top-left 
+
+  /*
+   * Draws the planets in a small radar screen in the top-left
    */
   drawRadar = function() {
     var rw = width/10, rh = height/10, trans, i, s;
@@ -143,7 +144,7 @@ var game = (function () {
         r.circle(p.cx,p.cy,p.cr).attr({fill: "grey"});
       }
     }
-    
+
     // draw ship
     s = trans(ship);
     r.circle(ship.cx,ship.cy, 3).attr({fill: "teal"});
@@ -194,23 +195,23 @@ var game = (function () {
 
 
     drawPlanets(ang, scaleFactor);
-    
+
     // Update ship state
     if (keyboard.keydown(37)) {
       ship.angle -= angleInc;
     }
-    
+
     if (keyboard.keydown(39)) {
       ship.angle += angleInc;
     }
-    
+
     if (keyboard.keydown(38)) {
       speedAtAngle =  mag(Math.cos(ship.angle) * ship.vy, Math.sin(ship.angle) * ship.vx);
       var partialAcc = acceleration*f(speedAtAngle);
 
       var nvx = ship.vx - Math.sin(ship.angle) * partialAcc;
       var nvy = ship.vy - Math.cos(ship.angle) * partialAcc;
- 
+
       if (mag(nvx,nvy) < maxPercent *c) {
         ship.vx = nvx;
         ship.vy = nvy;
@@ -218,7 +219,7 @@ var game = (function () {
       thruster = true;
     }
 
-    /* 
+    /*
      * Distance travelled (i.e. change in 'x' and 'y') is equal to velocity multiplied by time.
      * We're going at relativistic speeds so each "time unit"  (relative to the stars) is actually get larger.
      * Therefore we move larger distances in each time unit. The time unit is equal to 1/scaleFactor.
@@ -257,7 +258,7 @@ var keyboard = (function () {
     console.log(ev.which);
     keypresses[ev.which] = true;
   };
-  
+
   var keyupHandler = function(ev) {
     keypresses[ev.which] = false;
   };
