@@ -30,6 +30,22 @@
   }
 })();
 
+// A better console.log. Limits how much it spits out. Good for when stuck inside a loop.
+var logCounts = {};
+
+var log = function(unique) {
+  return(function() {
+    logCounts[unique] = (logCounts[unique] || 0);
+
+    if (logCounts[unique] < 50) {
+      logCounts[unique]++;
+      console.log(unique + ":");
+      console.log.apply(console,arguments);
+    }
+  });
+};
+
+
 //-----------------------------------
 
 $('document').ready(function () {
