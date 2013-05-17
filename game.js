@@ -131,8 +131,8 @@ var game = (function () {
     return function(o) {
       var sx = w/width;
       var sy = h/height;
-      o.cpos = { x: Math.round((ship.pos.x - o.pos.x)*sx*scale + w/2) + tlx,
-                 y: Math.round(h/2 - (ship.pos.y - o.pos.y)*sy*scale) + tly };
+      o.pos.cx = Math.round((ship.pos.x - o.pos.x)*sx*scale + w/2) + tlx;
+      o.pos.cy = Math.round(h/2 - (ship.pos.y - o.pos.y)*sy*scale) + tly;
       o.cr = o.r * sx;
       return o;
     }
@@ -151,16 +151,16 @@ var game = (function () {
 
     for (i=1; i < points.length; i++) {
       p = trans(points[i]);
-      path += (i===0?"M":"L")+p.cpos.x+","+p.cpos.y;
+      path += (i===0?"M":"L")+p.pos.cx+","+p.pos.cy;
     }
     p = trans(points[0]);
-    path = "M"+p.cpos.x+","+p.cpos.y+path+"L"+p.cpos.x+","+p.cpos.y;
+    path = "M"+p.pos.cx+","+p.pos.cy+path+"L"+p.pos.cx+","+p.pos.cy;
 
     if (thruster) {
-      st.push(r.rect(ship.cpos.x-len/4, ship.cpos.y, len/2, len*2).attr({fill: "orange"}));
+      st.push(r.rect(ship.pos.cx-len/4, ship.pos.cy, len/2, len*2).attr({fill: "orange"}));
     }
     st.push(r.path(path).attr({fill: "teal"}));
-    st.rotate(Raphael.deg(ship.angle),s.cpos.x,s.cpos.y);
+    st.rotate(Raphael.deg(ship.angle),s.pos.cx,s.pos.cy);
   }
 
   var drawDirectionVector = function(speed,angle) {
@@ -189,14 +189,14 @@ var game = (function () {
 
     for (i=0;i<planets.length;i++) {
       p = trans(planets[i]);
-      if (p.cpos.x >=1 && p.cpos.x <= rw && p.cpos.y >= 1 && p.cpos.y <= rh) {
-        r.circle(p.cpos.x,p.cpos.y,p.cr).attr({fill: "grey"});
+      if (p.pos.cx >=1 && p.pos.cx <= rw && p.pos.cy >= 1 && p.pos.cy <= rh) {
+        r.circle(p.pos.cx,p.pos.cy,p.cr).attr({fill: "grey"});
       }
     }
 
     // draw ship
     s = trans(ship);
-    r.circle(ship.cpos.x,ship.cpos.y, 3).attr({fill: "teal"});
+    r.circle(ship.pos.cx,ship.pos.cy, 3).attr({fill: "teal"});
 
   }
 
@@ -204,13 +204,13 @@ var game = (function () {
     var tx, ty, i,
         middlePath = "r"+Raphael.deg(ang)+ "s1,"+scaleFactor+ "r"+(-Raphael.deg(ang));
 
-    trans(ship); // important. Need to have correct .cpos.x and .cpos.y for drawing planets.
+    trans(ship); // important. Need to have correct .pos.cx and .pos.cy for drawing planets.
     for (i=0; i < planets.length; i++) {
       p = trans(planets[i]);
-      tx = ship.cpos.x - p.cpos.x;
-      ty = ship.cpos.y - p.cpos.y;
+      tx = ship.pos.cx - p.pos.cx;
+      ty = ship.pos.cy - p.pos.cy;
       path = "t"+tx+","+ty+ middlePath + "t"+(-tx)+","+(-ty);
-      r.circle(p.cpos.x, p.cpos.y, p.cr).attr({ fill: "grey"}).transform(path);
+      r.circle(p.pos.cx, p.pos.cy, p.cr).attr({ fill: "grey"}).transform(path);
     }
 
   }
