@@ -104,11 +104,9 @@ var game = (function () {
     $(canvas).width(width);
     $(canvas).height(height);
     c = width/1000;
-    ship    = { x:0, y:0, angle: 0.0, vx: 0, vy: 0};
+    ship    = { pos: { x:0, y:0 }, angle: 0.0, v: { x: 0, y: 0 }};
     planets = randomPlanets(30);
-    universeWidth
     trans = translate(0,0, width, height,1);
-
 
     keyboard.init();
 
@@ -124,7 +122,7 @@ var game = (function () {
     var rand = function(n) { return Math.round(Math.random()*n*2) - n};
 
     for (i=0; i<n; i++) {
-      ps.push({x: rand(width*2), y:rand(height*2), r: Math.random()*width/30});
+      ps.push({ pos: { x: rand(width*2), y: rand(height*2) }, r: Math.random()*width/30});
     }
     return ps;
   }
@@ -133,36 +131,36 @@ var game = (function () {
     return function(o) {
       var sx = w/width;
       var sy = h/height;
-      o.cx = Math.round((ship.x - o.x)*sx*scale + w/2) + tlx;
-      o.cy = Math.round(h/2 - (ship.y - o.y)*sy*scale) + tly;
+      o.cpos = { x: Math.round((ship.pos.x - o.pos.x)*sx*scale + w/2) + tlx,
+                 y: Math.round(h/2 - (ship.pos.y - o.pos.y)*sy*scale) + tly };
       o.cr = o.r * sx;
-      return(o);
+      return o;
     }
   };
 
-
   // Ship is always drawn at (0,0) co-ordinates
   var drawShip = function(thruster) {
-    var len = width/100, i, p,
-        points = [ {x: ship.x,     y: ship.y-len },
-                   {x: ship.x-len, y: ship.y+len },
-                   {x: ship.x+len, y: ship.y+len } ],
+    var pos = ship.pos,
+        len = width/100, i, p,
+        points = [ {pos: {x: pos.x,     y: pos.y-len }},
+                   {pos: {x: pos.x-len, y: pos.y+len }},
+                   {pos: {x: pos.x+len, y: pos.y+len }} ],
         path = "";
         s = trans(ship);
     var st = r.set();
 
     for (i=1; i < points.length; i++) {
       p = trans(points[i]);
-      path += (i===0?"M":"L")+p.cx+","+p.cy;
+      path += (i===0?"M":"L")+p.cpos.x+","+p.cpos.y;
     }
     p = trans(points[0]);
-    path = "M"+p.cx+","+p.cy+path+"L"+p.cx+","+p.cy;
+    path = "M"+p.cpos.x+","+p.cpos.y+path+"L"+p.cpos.x+","+p.cpos.y;
 
     if (thruster) {
-      st.push(r.rect(ship.cx-len/4, ship.cy, len/2, len*2).attr({fill: "orange"}));
+      st.push(r.rect(ship.cpos.x-len/4, ship.cpos.y, len/2, len*2).attr({fill: "orange"}));
     }
     st.push(r.path(path).attr({fill: "teal"}));
-    st.rotate(Raphael.deg(ship.angle),s.cx,s.cy);
+    st.rotate(Raphael.deg(ship.angle),s.cpos.x,s.cpos.y);
   }
 
   var drawDirectionVector = function(speed,angle) {
@@ -191,28 +189,28 @@ var game = (function () {
 
     for (i=0;i<planets.length;i++) {
       p = trans(planets[i]);
-      if (p.cx >=1 && p.cx <= rw && p.cy >= 1 && p.cy <= rh) {
-        r.circle(p.cx,p.cy,p.cr).attr({fill: "grey"});
+      if (p.cpos.x >=1 && p.cpos.x <= rw && p.cpos.y >= 1 && p.cpos.y <= rh) {
+        r.circle(p.cpos.x,p.cpos.y,p.cr).attr({fill: "grey"});
       }
     }
 
     // draw ship
     s = trans(ship);
-    r.circle(ship.cx,ship.cy, 3).attr({fill: "teal"});
+    r.circle(ship.cpos.x,ship.cpos.y, 3).attr({fill: "teal"});
 
   }
 
   var drawPlanets = function(ang, scaleFactor) {
-    var tx, ty,
+    var tx, ty, i,
         middlePath = "r"+Raphael.deg(ang)+ "s1,"+scaleFactor+ "r"+(-Raphael.deg(ang));
 
-    trans(ship); // important. Need to have correct .cx and .cy for drawing planets.
+    trans(ship); // important. Need to have correct .cpos.x and .cpos.y for drawing planets.
     for (i=0; i < planets.length; i++) {
       p = trans(planets[i]);
-      tx = ship.cx - p.cx;
-      ty = ship.cy - p.cy;
+      tx = ship.cpos.x - p.cpos.x;
+      ty = ship.cpos.y - p.cpos.y;
       path = "t"+tx+","+ty+ middlePath + "t"+(-tx)+","+(-ty);
-      r.circle(p.cx, p.cy, p.cr).attr({ fill: "grey"}).transform(path);
+      r.circle(p.cpos.x, p.cpos.y, p.cr).attr({ fill: "grey"}).transform(path);
     }
 
   }
@@ -229,12 +227,12 @@ var game = (function () {
     var f = function(v) { return(Math.sqrt(1.0 - v*v/(c*c))); };
     var mag = function(x,y) { return(Math.sqrt(x*x+y*y));};
     var sgn = function(x) { return x < 0 ? -1 : 1; };
-    var speed = mag(ship.vx, ship.vy);
+    var speed = mag(ship.v.x, ship.v.y);
     var speedAtAngle;
 
     var scaleFactor = f(speed);
     // angle the ship is travelling (not the direction it is facing)
-    var ang = Math.atan2(ship.vx,ship.vy);
+    var ang = Math.atan2(ship.v.x, ship.v.y);
     var path;
 
     var percentOfC = Math.round(speed/c*1000)/10;
@@ -257,15 +255,15 @@ var game = (function () {
     }
 
     if (keyboard.keydown(38)) {
-      speedAtAngle =  mag(Math.cos(ship.angle) * ship.vy, Math.sin(ship.angle) * ship.vx);
+      speedAtAngle =  mag(Math.cos(ship.angle) * ship.v.y, Math.sin(ship.angle) * ship.v.x);
       var partialAcc = acceleration*f(speedAtAngle);
 
-      var nvx = ship.vx - Math.sin(ship.angle) * partialAcc;
-      var nvy = ship.vy - Math.cos(ship.angle) * partialAcc;
+      var nvx = ship.v.x - Math.sin(ship.angle) * partialAcc;
+      var nvy = ship.v.y - Math.cos(ship.angle) * partialAcc;
 
       if (mag(nvx,nvy) < maxPercent *c) {
-        ship.vx = nvx;
-        ship.vy = nvy;
+        ship.v.x = nvx;
+        ship.v.y = nvy;
       }
       thruster = true;
     }
@@ -276,8 +274,8 @@ var game = (function () {
      * Therefore we move larger distances in each time unit. The time unit is equal to 1/scaleFactor.
      * This means it starts at 1 for low velocities and gets much larger as we approach the speed of light.
      */
-    ship.x += ship.vx * (1/scaleFactor);
-    ship.y += ship.vy * (1/scaleFactor);
+    ship.pos = { x: ship.pos.x + ship.v.x * (1/scaleFactor),
+                 y: ship.pos.y + ship.v.y * (1/scaleFactor) };
 
     drawShip(thruster);
     drawDirectionVector(speed,ang);
@@ -306,7 +304,7 @@ var keyboard = (function () {
   };
 
   var keydownHandler = function(ev) {
-    console.log(ev.which);
+//    console.log(ev.which);
     keypresses[ev.which] = true;
   };
 
