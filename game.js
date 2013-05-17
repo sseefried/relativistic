@@ -35,7 +35,42 @@
 $('document').ready(function () {
   game.init();
   game.start();
-})
+});
+
+
+//
+// Library of Lorentz transformations in 2D.
+// It must be initaliased with the value of c
+// otherwise it defaults to 1.
+//
+// Usage: var <variable> = Lorentz(42);
+//
+var Lorentz = function(c) {
+  c = (c || 1);
+  
+  // Dot product of two vectors
+  var dot = function(u,v) {
+    return (u.x * v.x + u.y * v.y);
+  };
+
+  var beta = function(v) {
+    Math.sqrt(1 - dot(v,v)/(c*c));
+  };
+
+  // 'st' is  a space time object e.g. { x: <x>, y: <y>, t: <y> }
+  // 'v'  is a velocity object { x: <x component of velocity>, 
+  //                             y: <y component of velocity> }
+  var boost = function(st,v) {
+    return({ x: (st.x - v.x*st.t)/beta(v), 
+             y: (st.y - v.y*st.t)/beta(v),
+             t: (st.t - (dot(v,st)/(c*c)))/beta(v) });
+  };
+  
+  // Export the methods of this module
+  return({
+    boost: boost
+  });
+};
 
 var game = (function () {
   var c; // speed of light
