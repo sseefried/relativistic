@@ -69,8 +69,28 @@ var Lorentz = function(c) {
     return (u.x * v.x + u.y * v.y);
   };
 
+  var add = function(u,v) {
+    return { x: u.x + v.x, y: u.y + v.y};
+  };
+  
+  var sub = function(u,v) {
+    return { x: u.x - v.x, y: u.y - v.y};
+  };
+
+  var mag = function(v) {
+    return Math.sqrt(dot(v,v));
+  };
+  
+  var scale = function(s,v) {
+    return { x: s*v.x, y: s*v.y};
+  };
+
+  var angle = function(v) {
+    return Math.atan2(v.x, v.y);
+  };
+
   var beta = function(v) {
-    Math.sqrt(1 - dot(v,v)/(c*c));
+    return Math.sqrt(1 - dot(v,v)/(c*c));
   };
 
   // 'st' is  a space time object e.g. { x: <x>, y: <y>, t: <y> }
@@ -84,16 +104,30 @@ var Lorentz = function(c) {
   
   // Export the methods of this module
   return({
+    dot: dot,
+    add: add,
+    sub: sub,
+    mag: mag,
+    scale: scale,
+    angle: angle,
+    beta: beta,
     boost: boost
   });
 };
 
+//
+// S = ship's frame of reference
+// P = planets' frame of reference 
+//
+
 var game = (function () {
+  var lz; // Lorentz library
   var c; // speed of light
   var ended, canvas, r, width, height;
   var ship, planets;
   var universeWidth, universeHeight;
   var trans; // the translate function
+  var accel;
 
   var init = function() {
 
@@ -104,9 +138,14 @@ var game = (function () {
     $(canvas).width(width);
     $(canvas).height(height);
     c = width/1000;
-    ship    = { pos: { x:0, y:0 }, angle: 0.0, v: { x: 0, y: 0 }};
+    lz = Lorentz(c);
+    accel = c/20;
+    //
+    // The time rate measures how many seconds pass in S as opposed to P.
+    //
+    ship    = { pos: { x:0, y:0 }, angle: 0.0, v: { x: 0, y: 0 }, timeRate: 1.0 };
     planets = randomPlanets(30);
-    trans = translate(0,0, width, height,1);
+    trans   = translate(0,0, width, height,1);
 
     keyboard.init();
 
@@ -163,7 +202,9 @@ var game = (function () {
     st.rotate(Raphael.deg(ship.angle),s.pos.cx,s.pos.cy);
   }
 
-  var drawDirectionVector = function(speed,angle) {
+  var drawDirectionVector = function(v) {
+    var speed = lz.mag(v);
+    var angle = lz.angle(v);
     var paddingX = 10;
     var paddingY = 50;
     var dl = 25;
@@ -174,8 +215,6 @@ var game = (function () {
 
     r.circle(dcx,dcy,dl).attr({stroke: dcolor, "stroke-width": "2"});
     r.path("M" + dcx + "," + dcy + "L" + (dcx-dx) + "," + (dcy + dy)).attr({stroke: dcolor, "stroke-width": "2px"});
-
-
   }
 
   /*
@@ -200,8 +239,8 @@ var game = (function () {
 
   }
 
-  var drawPlanets = function(ang, scaleFactor) {
-    var tx, ty, i,
+  var drawPlanets = function(v) {
+    var tx, ty, i, ang = lz.angle(v), scaleFactor = lz.beta(v),
         middlePath = "r"+Raphael.deg(ang)+ "s1,"+scaleFactor+ "r"+(-Raphael.deg(ang));
 
     trans(ship); // important. Need to have correct .pos.cx and .pos.cy for drawing planets.
@@ -215,35 +254,30 @@ var game = (function () {
 
   }
 
+  var thrust = function() {
+    var deltaV = { x: accel*Math.sin(ship.angle), y: accel*Math.cos(ship.angle) };
+    ship.v = lz.scale(1/(1 - lz.dot(ship.v, deltaV)/(c*c)),lz.sub(ship.v, deltaV));
+
+    // FIXME: Still need this fudge factor! Annoying! Floating point maths 
+    // is the problem I think.
+    ship.v = lz.scale(0.999, ship.v);
+
+  };
+
   var animate = function() {
-
     var maxPercent = 0.999;
-
     var angleInc = 0.12;
     var thruster = false;
     var i,p;
-
-    var acceleration = c/40;
-    var f = function(v) { return(Math.sqrt(1.0 - v*v/(c*c))); };
-    var mag = function(x,y) { return(Math.sqrt(x*x+y*y));};
-    var sgn = function(x) { return x < 0 ? -1 : 1; };
-    var speed = mag(ship.v.x, ship.v.y);
-    var speedAtAngle;
-
-    var scaleFactor = f(speed);
-    // angle the ship is travelling (not the direction it is facing)
-    var ang = Math.atan2(ship.v.x, ship.v.y);
+    var speed = lz.mag(ship.v);
     var path;
-
     var percentOfC = Math.round(speed/c*1000)/10;
-
 
     $('#stats').text(percentOfC + "% c");
 
     r.clear();
 
-
-    drawPlanets(ang, scaleFactor);
+    drawPlanets(ship.v);
 
     // Update ship state
     if (keyboard.keydown(37)) {
@@ -254,17 +288,9 @@ var game = (function () {
       ship.angle += angleInc;
     }
 
+    // Thruuuuust!
     if (keyboard.keydown(38)) {
-      speedAtAngle =  mag(Math.cos(ship.angle) * ship.v.y, Math.sin(ship.angle) * ship.v.x);
-      var partialAcc = acceleration*f(speedAtAngle);
-
-      var nvx = ship.v.x - Math.sin(ship.angle) * partialAcc;
-      var nvy = ship.v.y - Math.cos(ship.angle) * partialAcc;
-
-      if (mag(nvx,nvy) < maxPercent *c) {
-        ship.v.x = nvx;
-        ship.v.y = nvy;
-      }
+      thrust();
       thruster = true;
     }
 
@@ -274,11 +300,12 @@ var game = (function () {
      * Therefore we move larger distances in each time unit. The time unit is equal to 1/scaleFactor.
      * This means it starts at 1 for low velocities and gets much larger as we approach the speed of light.
      */
-    ship.pos = { x: ship.pos.x + ship.v.x * (1/scaleFactor),
-                 y: ship.pos.y + ship.v.y * (1/scaleFactor) };
+    var factor = 1/lz.beta(ship.v);
+    ship.pos = { x: ship.pos.x + ship.v.x * factor,
+                 y: ship.pos.y + ship.v.y * factor };
 
     drawShip(thruster);
-    drawDirectionVector(speed,ang);
+    drawDirectionVector(ship.v);
     drawRadar();
 
     if (!ended) {
