@@ -37,7 +37,7 @@ var log = function(unique) {
   return(function() {
     logCounts[unique] = (logCounts[unique] || 0);
 
-    if (logCounts[unique] < 50) {
+    if (logCounts[unique] < 200) {
       logCounts[unique]++;
       console.log(unique + ":");
       console.log.apply(console,arguments);
@@ -77,6 +77,12 @@ var Lorentz = function(c) {
     return { x: u.x - v.x, y: u.y - v.y};
   };
 
+  // rotate anti-clockwise by theta
+  var rotate = function(v, theta) {
+    return { x: v.x*Math.cos(theta) - v.y*Math.sin(theta),
+             y: v.y*Math.cos(theta) + v.x*Math.sin(theta) };
+  }
+  
   var mag = function(v) {
     return Math.sqrt(dot(v,v));
   };
@@ -110,6 +116,7 @@ var Lorentz = function(c) {
   return({
     dot: dot,
     add: add,
+    rotate: rotate,
     sub: sub,
     mag: mag,
     scale: scale,
@@ -150,6 +157,7 @@ var game = (function () {
     //
     ship    = { pos: { x:0, y:0 }, angle: 0, v: { x: 0, y: 0 }, timeRate: 1.0 };
     planets = randomPlanets(30);
+//    planets = [ { pos: {x: 40, y: 40}, r: 20}]
     trans   = translate(0,0, width, height,1);
 
     keyboard.init();
@@ -175,8 +183,8 @@ var game = (function () {
     return function(o) {
       var sx = w/width;
       var sy = h/height;
-      o.pos.cx = Math.round((ship.pos.x - o.pos.x)*sx*scale + w/2) + tlx;
-      o.pos.cy = Math.round(h/2 - (ship.pos.y - o.pos.y)*sy*scale) + tly;
+      o.pos.cx = Math.round((o.pos.x - ship.pos.x)*sx*scale + w/2) + tlx;
+      o.pos.cy = Math.round(h/2 - (o.pos.y - ship.pos.y)*sy*scale) + tly;
       o.cr = o.r * sx;
       return o;
     }
@@ -186,9 +194,9 @@ var game = (function () {
   var drawShip = function(thruster) {
     var pos = ship.pos,
         len = width/100, i, p,
-        points = [ {pos: {x: pos.x-len, y: pos.y     }},
-                   {pos: {x: pos.x+len, y: pos.y-len }},
-                   {pos: {x: pos.x+len, y: pos.y+len }} ],
+        points = [ {pos: {x: pos.x+len, y: pos.y     }},
+                   {pos: {x: pos.x-len, y: pos.y-len }},
+                   {pos: {x: pos.x-len, y: pos.y+len }} ],
         path = "";
         s = trans(ship);
     var st = r.set();
@@ -246,53 +254,45 @@ var game = (function () {
   }
 
   var drawPlanets = function(v) {
-    var tx, ty, i, ang = lz.angle(v), scaleFactor = lz.beta(v),
-        middlePath = "r"+Raphael.deg(Math.PI/2-ang)+ "s1,"+scaleFactor+ "r"+(-Raphael.deg(Math.PI/2 - ang));
+    var tx, ty, i, ang = Math.PI/2 - lz.angle(v), scaleFactor = lz.beta(v),
+        middlePath = "r"+Raphael.deg(ang)+ "s1,"+scaleFactor+ "r"+(-Raphael.deg(ang));
 
     trans(ship); // Important. Need to have correct .pos.cx and .pos.cy for drawing planets.
     for (i=0; i < planets.length; i++) {
       p = trans(planets[i]);
-      tx = ship.pos.cx + p.pos.cx;
+      tx = ship.pos.cx - p.pos.cx;
       ty = ship.pos.cy - p.pos.cy;
       path = "t"+tx+","+ty+ middlePath + "t"+(-tx)+","+(-ty);
-      r.circle(-p.pos.cx, -p.pos.cy, p.cr).attr({ fill: "grey"}).transform(path);
+      r.circle(p.pos.cx, p.pos.cy, p.cr).attr({ fill: "grey"}).transform(path);
     }
 
   };
 
-
-  var g;
-
   var thrust = function() {
+//    ship.v = lz.add(ship.v, { x: accel*Math.cos(ship.angle), y: accel*Math.sin(ship.angle)});
+    var   theta = ship.angle - lz.angle(ship.v),
+          vx = lz.mag(ship.v);
+          u = lz.rotate({ x: accel, y: 0}, theta);
+          gamma = 1/(1 + (u.x*vx)/(c*c)),
+          b     = Math.sqrt(1 - (vx*vx)/(c*c));
+  
+          // 
+          // log("ship.angle")(ship.angle);
+          // log("ship.v.angle")(lz.angle(ship.v));
+          // log("ship.v")(ship.v);
+          // log("vx")(vx/c);
+          // log("u")(u);
+          // log("theta", theta);
+          // log("gamma")(gamma);
+          // log("beta")(b);
+  
 
-    ship.v = lz.add(ship.v,{ x: accel*Math.cos(ship.angle), y: accel*Math.sin(ship.angle)});
-    console.log(ship.v);
-    console.log(lz.angle(ship.v));
-
-  //   if (g === undefined) {
-  //   var  sa = lz.angle(ship.v),
-  //        ang = sa - ship.angle, // angle of the velocity relative to velocity of ship
-  //         v = { x: ship.v.x*Math.cos(sa), y: ship.v.y*Math.sin(sa)},
-  //         u = { x: accel*Math.sin(ang), y: accel*Math.cos(ang) },
-  //         gamma = 1/(1 + (u.x*v.x)/(c*c)),
-  //         b     = 1/lz.beta(v);
-  //         // log("v")(v);
-  //         // log("gamma")(gamma);
-  //         // log("b")(b);
-  // 
-  //         log("v")(v);
-  //         log("u")(u);
-  //         log("sa")(sa);
-  //         log("ang")(ang);
-  // 
-  // 
-  // var newV = { x: u.x*gamma*b, y: (u.y + v.y)*gamma };
   // log("newV")(newV);
-  // ship.v = newV;
-  // log("ship.v")(ship.v);
-  // log("----------")('----------');
-  // }
-//  g = 1;
+  // log("mag newV_")(lz.mag(newV_)/c);
+  // log("mag newV")(lz.mag(newV)/c);
+  ship.v = lz.rotate({ x: (u.x+vx)*gamma, y: u.y*gamma*b },lz.angle(ship.v));
+  log("----------")('----------');
+
   };
   
   var animate = function() {
